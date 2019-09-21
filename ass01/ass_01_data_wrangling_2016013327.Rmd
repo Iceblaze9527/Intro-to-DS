@@ -1,0 +1,184 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.1'
+      jupytext_version: 1.2.4
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+# HW 01 Data Wrangling
+> BY: 新雅62/CDIE6 2016013327 项雨桐
+
+> 2019-09-21
+
+
+## 代码实现
+
+```{python}
+# coding = <GBK>
+from bs4 import BeautifulSoup
+import pandas as pd
+import numpy as np
+```
+
+```{python}
+with open("grades.html", encoding="GBK") as raw_html:
+    parsed_html = BeautifulSoup(raw_html)
+    
+tables = parsed_html.find_all("table")
+
+grades = tables[2]# no specific feature for the grade table, use numerical index to specify ( Will there be better choices using .find_all() if I can index a table by some particular strings?)
+
+header, *records, _ = grades.tbody.find_all("tr", recursive = False) # the underscore is used for ignoring values, see https://hackernoon.com/understanding-the-underscore-of-python-309d1a029edc
+
+fields = [field.div.text for field in header.find_all("th", recursive = False)]# maybe field.div just return an object and field.div.text is used for specify the string? cannot find clear explanation in official docs
+```
+
+```{python}
+def ParseCell(cell):
+    if cell.div:
+        if cell.div.script:# if there's script tag in div
+            return cell.div.contents[0].strip() # what does contents mean?
+        return cell.div.text.strip()
+    else:
+        return cell.text.strip()
+
+data = [[ParseCell(cell) for cell in row.find_all("td")] for row in records]# form a list of lists for every row
+
+data_frame = pd.DataFrame(columns=fields,data=data)
+
+data_frame.to_csv("grades.csv",encoding = "GBK")
+```
+
+```{python}
+# so lucky (or not?) that I don't have any W/P/F's or any missing data in a row, so no other cleaning steps needed except for deleting empty columns. Still, I would put codes that handle the possible mess below, which have been validated by the given transcript)
+
+# 1. drop the unnecessary columns
+
+data_frame = data_frame.drop(columns = ['替代课程','特殊课程标志'])# note that by default it drops rows by labels
+```
+
+```{python}
+# 2. delete '成绩 = P' rows and '绩点 = N/A' 
+
+data_frame = data_frame.drop(data_frame[(data_frame["成绩"] == "P")|(data_frame["成绩"] == "")|(data_frame["绩点"] == "N/A")].index)
+```
+
+```{python}
+# 3. string to numerical （学分，学时，绩点）for calculation
+data_frame['学分'] = data_frame['学分'].replace("", np.nan)
+data_frame['学分'] = pd.to_numeric(data_frame['学分'], downcast = 'integer')
+
+data_frame['学时'] = data_frame['学时'].replace("", np.nan)
+data_frame['学时'] = data_frame['学时'].fillna("0")#in case it turns out to be float
+data_frame['学时'] = pd.to_numeric(data_frame['学时'], downcast = 'integer')
+
+data_frame['绩点'] = data_frame['绩点'].replace("", np.nan)
+data_frame['绩点'] = pd.to_numeric(data_frame['绩点'], downcast = 'float')
+```
+
+```{python}
+# 4. fill in missing '学时' by functional reliance
+def replace_time(row):
+    if row['学时'] == 0:
+        row['学时'] = row['学分']*16
+    return row
+
+data_frame = data_frame.apply(replace_time, axis = 1)#apply send rows to func, or you can use lambda func
+```
+
+```{python}
+# calculate scores
+def ap_to_score(letter):
+    if letter == "A+":
+        score = 100
+    elif letter == "A":
+        score = 97.5
+    elif letter == "A":
+        score = 97.5
+    elif letter == "A-":
+        score = 92
+    elif letter == "B+":
+        score = 87
+    elif letter == "B":
+        score = 82
+    elif letter == "B-":
+        score = 78
+    elif letter == "C+":
+        score = 74.5
+    elif letter == "C":
+        score = 91
+    elif letter == "C-":
+        score = 68
+    elif letter == "D+":
+        score = 64.5
+    elif letter == "D":
+        score = 61
+    elif letter == "F":
+        score = 0
+    return score
+```
+
+```{python}
+# change arrangement of columns
+data_frame['百分制成绩'] = data_frame.apply(lambda row: ap_to_score(row['成绩']), axis = 1)
+new_fields = list(data_frame.columns.values)# get current column
+new_fields.insert(7,'百分制成绩')
+data_frame.reindex(new_fields,axis="columns")
+```
+
+```{python}
+# get summary
+summary_by_course_attribute_100 = data_frame.groupby(["课程属性"])[["百分制成绩"]].describe()
+summary_by_course_attribute_4 = data_frame.groupby(["课程属性"])[["绩点"]].describe()
+
+summary_by_semester_100 = data_frame.groupby(["学年学期"])[["百分制成绩"]].describe()
+summary_by_semester_4 = data_frame.groupby(["学年学期"])[["绩点"]].describe()
+
+# can be grouped by more than one category
+
+# calculate average scores
+average_score = sum(data_frame["百分制成绩"]*data_frame["学分"])/sum(data_frame["学分"])
+average_ap = sum(data_frame["绩点"]*data_frame["学分"])/sum(data_frame["学分"])
+
+# create score tube
+tube = {'姓名':['项雨桐'], '班级':['新雅62/CDIE6'], '学号':['2016013327']}
+tube['平均绩点'] = [round(average_ap,3)]
+tube['平均成绩'] = [round(average_score,2)]
+score_tube = pd.DataFrame.from_dict(tube)
+```
+
+## 结果显示
+
+
+### 各类课程成绩
+
+```{python}
+summary_by_course_attribute_100
+```
+
+```{python}
+summary_by_course_attribute_4
+```
+
+### 各学期成绩
+
+```{python}
+summary_by_semester_100
+```
+
+```{python}
+summary_by_semester_4
+```
+
+### 成绩条打印
+
+```{python}
+score_tube
+```
