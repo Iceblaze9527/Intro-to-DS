@@ -1,0 +1,286 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.1'
+      jupytext_version: 1.2.4
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+# Income prediction
+
+In this homework, you are required to analyze and visualize a dataset describing a person's income. In this dataset,  **more than 30,000** real records are collected. The attributes of each record include age, education, occupation, race, sex and so on. Note that some information is missed and was recorded as NaN. Please follow the start code of this project and finish the rest.
+
+Through this project, you are expected to have a better command of these fields:
+- Exploratory Data Analysis
+- Visualization
+
+The attribute information is:
+
+- **income**: the label of this dataset, belongs to \[high, low\] 
+- **age**: the age of a person, a continuous variable.
+- **work_class**: work class, belongs to \[Private, Self-emp-not-inc, Self-emp-inc, Federal-gov, Local-gov, State-gov, Without-pay, Never-worked\].
+- **education**: belongs to \[Bachelors, Some-college, 11th, HS-grad, Prof-school, Assoc-acdm, Assoc-voc, 9th, 7th-8th, 12th, - Masters, 1st-4th, 10th, Doctorate, 5th-6th, Preschool\].
+- **education_degree**: the education level of a person, an ordinal number variable.
+- **marital_status**: marital status, belongs to \[Married-civ-spouse, Divorced, Never-married, Separated, Widowed, Married-spouse-absent, Married-AF-spouse\]. 
+- **job**: occupation, belongs to \[Tech-support, Craft-repair, Other-service, Sales, Exec-managerial, Prof-specialty, Handlers-cleaners, Machine-op-inspct, Adm-clerical, Farming-fishing, Transport-moving, Priv-house-serv, Protective-serv, Armed-Forces\]. 
+- **relationship**: belongs to \[Wife, Own-child, Husband, Not-in-family, Other-relative, Unmarried\].
+- **race**: belongs to \[White, Asian-Pac-Islander, Amer-Indian-Eskimo, Other, Black\]. 
+- **sex**: belongs to \[Female, Male\]. 
+- **capital_gain**: capital gain, a continuous variable. 
+- **capital_loss**: capital loss, a continuous variable. 
+- **hours_per_week**: how long a person works every week, a continuous variable. 
+- **birthplace**: belongs to \[United-States, Cambodia, England, Puerto-Rico, Canada, Germany, Outlying-US(Guam-USVI-etc), India, - Japan, Greece, South, China, Cuba, Iran, Honduras, Philippines, Italy, Poland, Jamaica, Vietnam, Mexico, Portugal, Ireland, France, Dominican-Republic, Laos, Ecuador, Taiwan, Haiti, Columbia, Hungary, Guatemala, Nicaragua, Scotland, Thailand, Yugoslavia, El-Salvador, Trinadad&Tobago, Peru, Hong, Holand-Netherlands\].
+
+
+Specifically, you are required to **fill the blanks of this notebook** based on your results. In this assignment, you will analyze how different features, models and hyper-parameters influence the performance.
+
+
+## 1. Load Data
+
+```{python}
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import sklearn
+
+# %matplotlib inline
+# # %config InlineBackend.figure_format = 'svg'
+```
+
+```{python}
+df = pd.read_csv('income.csv')
+```
+
+## 2. Exploratory Data Analysis
+
+
+### Take a brief look at the data using `head()`
+
+```{python}
+df.head()
+```
+
+### Observe the basic statistical information of continuous attributes
+
+```{python}
+df.describe() # only describe the continuous variables
+```
+
+### Count the NaN values
+
+```{python}
+df.isnull().sum()  ### before
+```
+
+### Remove NaN values due to small proportion to the whole dataset
+
+```{python}
+df = df.dropna()
+```
+
+```{python}
+df.isnull().sum()  ### after
+```
+
+### Pick out categorical and continuous variables
+
+```{python}
+df.info()
+```
+
+### Observe categorical attributes
+
+```{python}
+for col in df.select_dtypes([np.object]).columns:
+    print('{}: {}\n'.format(col, df[col].unique()))
+```
+
+```{python}
+fig,axes = plt.subplots(nrows=1,ncols=1,figsize=(24,18))
+plt.xticks(fontsize=25)
+plt.yticks(fontsize=25)
+sns.countplot(y='education', data=df)
+```
+
+### Merge values of similar semantics
+
+```{python}
+df.education.replace({
+    'Preschool': 'dropout',
+    '10th': 'dropout',
+    '11th': 'dropout',
+    '12th': 'dropout',
+    '1st-4th': 'dropout',
+    '5th-6th': 'dropout',
+    '7th-8th': 'dropout',
+    '9th': 'dropout',
+    'HS-Grad': 'HighGrad',
+    'HS-grad': 'HighGrad',
+    'Some-colloge': 'CommunityCollege',
+    'Assoc-acdm': 'CommunityCollege',
+    'Assoc-voc': 'CommunityCollege',
+    'Prof-school': 'Masters',
+}, inplace=True)
+```
+
+### Univariable Analysis 
+
+
+#### Using `seaborn.countplot()` to show categorical univariable
+
+```{python}
+sns.countplot(y='education', data=df)
+###Question 1. plot more categorical attributes including work_class and marital_status using countplot().
+## 
+## Your code here
+## 
+```
+
+#### Using built-in API `plot()` of DataFrame: bar chart to show categorical univariable
+
+```{python}
+df.job.value_counts().plot(kind='bar', figsize=(8, 8), fontsize=8)
+###Question 2. plot more categorical attributes including work_class and marital_status using bar chart.
+## 
+## Your code here
+## 
+```
+
+#### Using built-in API `plot()` of DataFrame: pie chart  to show categorical univariable
+
+```{python}
+df.race.value_counts().plot(kind='pie', figsize=(8, 8), fontsize=8)
+###Question 3. plot more categorical attributes including work_class and marital_status using pie chart.
+## 
+## Your code here
+## 
+```
+
+#### Using `seaborn.distplot()` to show continuous univariable
+
+```{python}
+sns.distplot(df.hours_per_week)
+###Question 4. plot more (at least 1) continuous attributes using distplot, such as capital_loss, hours_per_week, etc.
+## 
+## Your code here
+## 
+```
+
+#### Using `plt.hist()` to show continuous univariable
+
+```{python}
+## Compare with seaborn.distplot()
+plt.hist(df.hours_per_week)
+```
+
+#### Using `seaborn.boxplot()` to show continuous univariable
+
+```{python}
+sns.boxplot(y=df.education_degree)
+###Question 5. plot more (at least 1) continuous attributes using boxplot, such as capital_loss, hours_per_week, etc.
+## 
+## Your code here
+## 
+```
+
+### Multivariable Analysis
+
+
+#### Using `seaborn.distplot()` with different conditions to show continuous multivariable's relationship
+
+```{python}
+sns.distplot(df[df.income == 'high']['age'], kde_kws={'label': 'high'})
+sns.distplot(df[df.income == 'low']['age'], kde_kws={'label': 'low'})
+###Question 6. plot more (at least 1) attributes (conditioned on income) using distplot, such as capital_loss, hours_per_week, etc.
+## 
+## Your code here
+## 
+```
+
+Using seaborn.boxplot() with different conditions to show continuous multivariable's relationship
+
+```{python}
+ax = sns.boxplot(x="income", y="age", data=df)
+###Question 7. plot more (at least 1) attributes (conditioned on income) using boxplot, such as capital_loss, hours_per_week, etc
+## 
+## Your code here
+## 
+```
+
+Using seaborn.scatterplot() to show the relationship between different continuous multivariable
+
+```{python}
+sns.scatterplot(x="capital_gain", y="capital_loss", data=df)
+```
+
+#### Using `seaborn.pairplot()` to reveal the relationships of different variables given the condition of `income` attributes
+
+```{python}
+sns.pairplot(df, hue="income", palette='deep',
+             size=3, diag_kind='kde', diag_kws=dict(shade=True), plot_kws=dict(s=20))
+```
+
+#### Using `seaborn.heatmap()` to capture the correlation between different attributes
+
+```{python}
+hmap = df.corr()
+plt.subplots(figsize=(24, 18))
+sns.set(font_scale=1.5)
+ax.tick_params(labelsize=50) 
+sns.heatmap(hmap, vmax=0.8, annot=True, cmap='BrBG', square=True)
+```
+
+#### Using `seaborn.countplot()` with different conditions to show categorical multivariable's relationship
+
+```{python}
+## Example: Citizens work in gov can earn more than those in private
+
+## proof by plot
+sns.countplot(y='work_class',hue = 'income',data=df)
+
+## proof by calculation
+private_df = df[df.work_class == 'Private']
+gov_array = ['State-gov', 'Federal-gov', 'Local-gov']
+gov_df = df[df.work_class.isin(gov_array)]
+high_rate_in_private = private_df[private_df.income == 'high'].shape[0] / float(private_df.shape[0])
+high_rate_in_gov = gov_df[gov_df.income == 'high'].shape[0] / float(gov_df.shape[0])
+print('high_rate_in_private: ', high_rate_in_private)
+print('high_rate_in_gov: ', high_rate_in_gov)
+```
+
+### Your Task
+
+You are asked to inference the intrinsic correlations between different columns, e.g. `income` and `sex`.
+
+Please proof whether the following assumptions are **True or Not** on our dataset? **Draw plots and calculate some values as the example to support your conclusion**.
+
+1. Married citizens with spouse have higher chances of earning more than those who're unmarried/divorced/widowed/separated.
+2. Males on an average earn more than females.
+3. Higher Education can lead to higher income in most cases.
+
+```{python}
+# Question 8: Married citizens with spouse have higher chances of earning more than those who're unmarried/divorced/widowed/separated.
+## 
+## Your code here
+## 
+```
+
+```{python}
+# Question 9: Males on an average make earn more than females.
+## 
+## Your code here
+## 
+```
+
+```{python}
+# Question 10: Higher Education can lead to higher income in most cases.
+## Your code here
+## 
+```

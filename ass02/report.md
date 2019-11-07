@@ -146,22 +146,3 @@
 ## 7 Delete: Delete the departments whose budget are lower than 50000.00 (including 50000.00)
 
 ![7.png](https://i.loli.net/2019/10/04/qrhpQckAe7mEKvR.png)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

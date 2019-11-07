@@ -1,4 +1,6 @@
+/*1*/
 CREATE DATABASE University;
+/*2*/
 CREATE TABLE department 
 (
 	dept_name varchar(20),
@@ -32,6 +34,8 @@ CREATE TABLE advise
     FOREIGN KEY (s_ID) REFERENCES student(s_ID),
     PRIMARY KEY (i_ID,s_ID)
 );
+/*3*/
+/*3.1*/
 INSERT INTO department(dept_name,building,budget)
 VALUES
 ('Biology','Watson',90000.00),
@@ -41,6 +45,7 @@ VALUES
 ('History','Painter',50000.00),
 ('Music','Packard',80000.00),
 ('Physics','Watson',70000.00);
+/*3.2*/
 INSERT INTO instructor(i_ID,i_name,dept_name,salary)
 VALUES
 ('76766','Crick','Biology',72000.00),
@@ -55,6 +60,7 @@ VALUES
 ('15151','Mozart','Music',40000.00),
 ('22222','Einstein','Physics',95000.00),
 ('33456','Gold','Physics',87000.00);
+/*3.3*/
 INSERT INTO student(s_ID,s_name,dept_name,tot_cred)
 VALUES
 ('98988','Tanaka','Biology',120),
@@ -70,6 +76,7 @@ VALUES
 ('44553','Peltier','Physics',56),
 ('45678','Levy','Physics',46),
 ('70557','Snow','Physics',0);
+/*3.4*/
 INSERT INTO advise(i_ID,s_ID)
 VALUES
 ('76766','98988'),
@@ -81,43 +88,43 @@ VALUES
 ('76543','23121'),
 ('22222','44553'),
 ('22222','45678');
-
+/*4.1*/
 SELECT * FROM student
 WHERE tot_cred >= 100;
-	
+/*4.2*/	
 SELECT * FROM instructor
 WHERE salary <= 70000.00;
-
+/*4.3*/
 SELECT * FROM department
 WHERE budget >= 80000.00
 ORDER BY budget DESC;
-
+/*4.4*/
 SELECT avg(salary) FROM instructor
 WHERE salary >= 50000.00 AND salary <= 100000.00;
-
+/*4.5*/
 WITH temp AS
 (SELECT count(s_ID) as total_students, dept_name as dept FROM student
 GROUP BY dept
 HAVING count(s_ID) >= 2)
 SELECT count(instructor.i_ID) as total_instructors, temp.total_students, temp.dept as department FROM instructor inner join temp on temp.dept = instructor.dept_name
 GROUP BY temp.dept;
-
+/*5.1.1*/
 SELECT * FROM student natural join advise;
-
+/*5.1.2*/
 SELECT * FROM student inner join advise on student.s_ID = advise.s_ID;
-
+/*5.1.3*/
 SELECT * FROM student left outer join advise on student.s_ID = advise.s_ID;
-
+/*5.1.4*/
 SELECT * FROM student right outer join advise on student.s_ID = advise.s_ID;
-	
+/*5.1.5*/	
 SELECT * FROM student left outer join advise on student.s_ID = advise.s_ID
 UNION
 SELECT * FROM student right outer join advise on student.s_ID = advise.s_ID;
-
+/*5.2*/
 SELECT instructor.i_name, count(advise.s_ID) as total_student_advised FROM instructor 
 left outer join advise on instructor.i_ID = advise.i_ID
 GROUP BY instructor.i_name;
-
+/*6*/
 UPDATE instructor, 
 (
 SELECT instructor.i_name, count(advise.s_ID) as total_student_advised 
@@ -126,7 +133,7 @@ GROUP BY instructor.i_name
 ) AS statistics
 SET instructor.salary = instructor.salary * 2
 WHERE instructor.i_name = statistics.i_name AND statistics.total_student_advised >= 2;
-
+/*7*/
 ALTER TABLE instructor
 DROP FOREIGN KEY instructor_ibfk_1;
 

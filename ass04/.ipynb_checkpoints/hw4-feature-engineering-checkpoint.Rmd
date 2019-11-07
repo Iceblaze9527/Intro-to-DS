@@ -1,0 +1,159 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.1'
+      jupytext_version: 1.2.4
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+## 0. Basic knowledge of feature engineering
+
+```{python}
+## Question 1: A good feature should be __________ and __________.
+```
+
+```{python}
+## Question 2: Why is image feature extraction hard? __________________________________________________
+```
+
+```{python}
+## Question 3: As we have learned in class, both 'Maximum entropy' and 'Smallest margin' can be used to
+##             measure uncertainty in active learning. Please explain which one is better for active learning and why?
+##             Note that: this is an open question and you can answer in Chinese as well.
+##             ______________________________________________________________________________________
+```
+
+## 1. Text feature engineering
+
+```{python}
+## Given a corpus as:
+corpus = ['The goal of this lecture is to explain text processing.',
+          'The bag of words model is one such approach.',
+          'Text processing via bag of words.',
+          'Data science includes text processing']
+```
+
+```{python}
+# !pip3 install sklearn
+## Question 4: Use BOW to extract features of the given corpus. 
+## 
+## Your code here
+## 
+```
+
+```{python}
+## Question 5: Use TFIDF to extract features of the given corpus. 
+## 
+## Your code here
+## 
+```
+
+```{python}
+## Question 6: Use Word2Vec to extract features of the given corpus. 
+# !pip3 install gensim
+from gensim.test.utils import common_texts
+from gensim.sklearn_api import W2VTransformer
+# Create a model to represent each word by a 10 dimensional vector
+model = W2VTransformer(size=10, min_count=1, seed=1)
+## The model trained on the common_texts
+# What is the vector representation of the word ‘graph’? 
+common_texts
+wordvecs = model.fit(common_texts).transform(['graph']) 
+wordvecs
+## 
+## You should extract the vector representation of the word 'text' by the model trained on the given corpus.
+## Note that: the formulation of the given corpus is different from that of common_texts, 
+## you should transform the given corpus to the the formulation of common_texts first.
+## 
+## Your code here
+## 
+```
+
+## 2. Time series feature engineering
+
+```{python}
+## Question 7: Use decompose (model='additive') to extract time series features of the given time series
+from random import randrange
+import math
+from pandas import Series
+series = Series([20*math.sin(i/18*math.pi) + i + randrange(10) for i in range(1,360)])
+```
+
+```{python}
+from matplotlib import pyplot
+from statsmodels.tsa.seasonal import seasonal_decompose
+## 
+## Your code here
+## 
+```
+
+```{python}
+## Question 8: Use Discrete Fourier Transform (DFT) to extract time series features of the given time series
+import matplotlib.pyplot as plt
+import numpy as np
+series = Series([np.cos(2*math.pi*1/8*n+math.pi/8) for n in range(800)])
+## 
+## Your code here
+## 
+```
+
+## 3. Image feature engineering
+
+```{python}
+## Use SIFT in opencv-python to extract image features on the given image 'morning.jpg'
+# !pip install opencv-python==3.4.2.16
+# !pip install opencv-contrib-python==3.4.2.16
+## Note that: NOT all versions of opencv-contrib-python includes SIFT in cv2.xfeatures2d, 
+## but this specified version does
+import cv2
+import numpy as np
+name = 'dog.jpg'
+img = cv2.imread(name)
+gray_img= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+print("The shape of the image: ", gray_img.shape)
+siftDetector= cv2.xfeatures2d.SIFT_create()
+## Note that: SIFT was re-organized in opencv thus you should import it like this.
+
+## finds the keypoint in the images
+kp = siftDetector.detect(gray_img,None)
+## draws the small circles on the locations of keypoints
+cv2.drawKeypoints(gray_img,kp,img,flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+cv2.imwrite('sift_keypoint_' + name, img) ## Save Example
+## directly find keypoints and descriptors in a single step 
+kp, des = siftDetector.detectAndCompute(gray_img,None)
+print("The shape of feature description: ", des.shape)
+```
+
+```{python}
+## Question 9: Please rescale the given image 'dog.jpg' at a random ratio between 0.3 with 1.5.
+##          Note that: the width and height of the given image should be rescaled at a different ratio.
+##          Repeat this operation five times, then you will get five new images with different scale.
+##
+##          Please extract the SIFT features of these images respectively and use 'imwrite' to save them.
+##          An example of saving keypoints on the input image is shown as follow:
+##          cv2.drawKeypoints(gray_img,kp,img,flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+##          cv2.imwrite('sift_keypoint_' + name, img)
+##
+## 
+## Your code here
+## 
+```
+
+```{python}
+## Question 10: Please rotate the given image 'dog.jpg' 30, 60, 90, 120, 150, 180 degrees clockwise,
+##              then you will get six new images with different rotation angle.
+##              Please extract the SIFT features of these images respectively and use 'imwrite' to save them.
+##              An example of saving keypoints on the input image is shown as follow:
+##              cv2.drawKeypoints(gray_img,kp,img,flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+##              cv2.imwrite('sift_keypoint_' + name, img)
+```
+
+```{python}
+
+```
