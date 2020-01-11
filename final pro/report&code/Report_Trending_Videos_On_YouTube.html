@@ -1,0 +1,970 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ds_report</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__left">
+    <div class="stackedit__toc">
+      
+<ul>
+<li><a href="#project-report">Project Report</a>
+<ul>
+<li><a href="#project-background">1. Project Background</a></li>
+<li><a href="#exploratory-data-analysis">2. Exploratory Data Analysis</a></li>
+<li><a href="#predictions">3. Predictions</a></li>
+<li><a href="#conclusion">4 Conclusion</a></li>
+<li><a href="#span-id--appappendix-anaconda-environment-configuration-span">Appendix: Anaconda Environment Configuration </a></li>
+</ul>
+</li>
+</ul>
+
+    </div>
+  </div>
+  <div class="stackedit__right">
+    <div class="stackedit__html">
+      <h1 id="project-report">Project Report</h1>
+<blockquote>
+<p>2016010829 Hu Yiju<br>
+2016010845 Wang Yuhan<br>
+2016013327 Xiang Yutong<br>
+2016010850 Xu Ming</p>
+</blockquote>
+<blockquote>
+<p>2020.01.11</p>
+</blockquote>
+<h2 id="project-background">1. Project Background</h2>
+<h3 id="introduction">1.1 Introduction</h3>
+<p>YouTube is the world-famous video sharing website, and it maintains a list of the top trending videos on the platform. To determine the year’s top-trending videos, YouTube uses a combination of factors, including measuring users’ number of views, shares, comments, and likes. This dataset is a daily record of the top trending YouTube videos.</p>
+<h3 id="orientation">1.2 Orientation</h3>
+<p>In this project, we’re particularly interested trending videos in western English-speaking countries, i.e., <strong>Canada, Great Britain, and the US</strong>. We will walk through exploration descriptive analysis to draw some interesting conclusions from the data. Besides, based on this, we will try to use various machine learning methods to help predict titles (or popular words in titles) of trending videos.</p>
+<h2 id="exploratory-data-analysis">2. Exploratory Data Analysis</h2>
+<h3 id="dataset-specification">2.1 Dataset Specification</h3>
+<p>Collected by the YouTube API, <a href="https://www.kaggle.com/datasnaek/youtube-new">this dataset</a> comprises several months (and counting) of data on daily trending YouTube videos in different regions. Each region’s data is in a separate CSV file with 16 columns, as shown below:</p>
+<p><img src="https://i.loli.net/2020/01/09/djP5pyCWnuAG361.png" alt="01.png"><br>
+Each CSV file includes a "category_id "field, which varies between regions and thus is stored in associated JSON files.</p>
+<img src="https://i.loli.net/2020/01/09/qLzFIwMYmbhsoD4.png" width="60%">
+<h3 id="span-id--2.22.2-observations-and-feature-selectionspan"><span id="2.2">2.2 Observations and Feature Selection</span></h3>
+<p>16 columns give us 16 features, combined with "category "in CSV files. Yet, not all of them are useful or handy enough to be useful. Thus, feature selection is needed.</p>
+<p>At first, we categorize these features by their types, namely, normal, ordinal, interval and ratio (<code>video_id</code> is the primary key):</p>
+
+<table>
+<thead>
+<tr>
+<th>statistical data type</th>
+<th>features</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>nominal</td>
+<td><code>title</code>, <code>channel_title</code>, <code>category</code>, <code>tags</code>, <code>thumbnail_link</code>, <code>comments_disabled</code>, <code>ratings_disabled</code>, <code>video_error_or_removed</code>, <code>description</code></td>
+</tr>
+<tr>
+<td>ordinal</td>
+<td><code>trending_date</code>, <code>publish_time</code>,</td>
+</tr>
+<tr>
+<td>interval</td>
+<td></td>
+</tr>
+<tr>
+<td>ratio</td>
+<td><code>views</code>, <code>likes</code>, <code>dislikes</code>, <code>comment_count</code></td>
+</tr>
+</tbody>
+</table><p>As can be seen, nominal data "channel_title "and "catetory "give us two natural aggregation bases, which can be useful in EDA, where we can discuss which category is the most popular, etc…<br>
+<code>title</code>, <code>tag</code>, and <code>description</code> may also be useful in deciding potential features that trending videos should have. Other data such as <code>thumbnail_link</code>, <code>comments_disabled</code>,<code>ratings_disabled</code>, <code>video_error_or_removed</code> are irrelevant to our analyses.</p>
+<p>Ordinal data are timestamps for videos. As videos can be on-trend for a period and numerical features accumulate through time, duplication removal is necessary, and thus these timestamps may not be useful. Only when one considers durations of trending somehow manifest popularity will they be contributory,  but that can be hazy and redundant, so the most time we can safely ignore them and just use them when showcasing some analytical results.</p>
+<p>Numerical data that count reviews of the video are important in the EDA  process. They can be used to display how much a video (or aggregation, i.e., category and channel) is appreciated or depreciated, and their statistics can be correlated. Some EDA methods can be used to examine these traits.</p>
+<p>The <code>title</code> feature is worth an extra mentioning. It is one of the most prominent features of a video, and most importantly, it is not an atomic feature; namely,  it can be seen as a combination of words, and every word can be a potential feature to determine the popularity of the video. Our predictive machine learning methods are all based on such observation.</p>
+<p>In conclusion, the features can be classified into 4 groups, and further analyses are based on this classification:</p>
+
+<table>
+<thead>
+<tr>
+<th>index</th>
+<th>feature</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>channel_title</code>, <code>category</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>views</code>, <code>likes</code>, <code>dislikes</code>, <code>comment_count</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>publish_time</code>, <code>trending_date</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>title</code>, <code>tags</code>, <code>description</code></td>
+</tr>
+</tbody>
+</table><h3 id="data-preprocessing">2.3 Data Preprocessing</h3>
+<p>As mentioned in <a href="#2.2">section 2.2</a>, we should do some preprocessing to make features more useful, which includes:</p>
+<h4 id="datetime--transformation">2.3.1 Datetime  Transformation</h4>
+<p>The timestamps can only be useful if they are in "python datetime "format, so a transformation is needed. Besides, it can also be dissected into <code>date</code> and <code>time</code> respectively to help give more insights.</p>
+<h4 id="category-names-combination">2.3.2 Category Names Combination</h4>
+<p>"catogory "can be useful, but data are stored aside in JSON files. So a combination is needed. We use mapping strategy to do this.</p>
+<h4 id="duplication-dropping">2.3.3 Duplication Dropping</h4>
+<p>As videos can be on-trend for a period and numerical features accumulate through time, duplication removal is necessary. Thus it is more reasonable to keep the last record of each duplicated item.</p>
+<h3 id="eda-technics">2.4 EDA Technics</h3>
+<h4 id="plots-and-charts">2.4.1. Plots and Charts</h4>
+<p>Plots and Charts are the most common way to visualize data in EDA. The plot and chart forms used in our EDA process are listed as follows:</p>
+<ul>
+<li><code>count plot</code>: Show the counts of observations in each categorical bin using bars</li>
+<li><code>barplot</code>: a chart or graph that presents categorical data bars with heights or lengths proportional to the values that they represent.</li>
+<li><code>scatterplot</code>: type of plot or mathematical diagram using Cartesian coordinates to display values for typically two variables for a set of data</li>
+<li><code>piecharts</code>: a circular statistical graphic which is divided into slices to illustrate numerical proportion</li>
+</ul>
+<h4 id="correlation-matrix-and-heat-map">2.4.2 Correlation Matrix and Heat Map</h4>
+<p>The correlation matrix of <span class="katex--inline"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.43056em; vertical-align: 0em;"></span><span class="mord mathdefault">n</span></span></span></span></span> random variables <span class="katex--inline"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><msub><mi>X</mi><mn>1</mn></msub><mo separator="true">,</mo><mo>…</mo><mo separator="true">,</mo><msub><mi>X</mi><mi>n</mi></msub></mrow><annotation encoding="application/x-tex">X_{1},\ldots ,X_{n}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.87777em; vertical-align: -0.19444em;"></span><span class="mord"><span style="margin-right: 0.07847em;" class="mord mathdefault">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.301108em;"><span class="" style="top: -2.55em; margin-left: -0.07847em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.166667em;"></span><span class="minner">…</span><span class="mspace" style="margin-right: 0.166667em;"></span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.166667em;"></span><span class="mord"><span style="margin-right: 0.07847em;" class="mord mathdefault">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.151392em;"><span class="" style="top: -2.55em; margin-left: -0.07847em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">n</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span></span></span></span></span> is the <span class="katex--inline"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>n</mi><mo>×</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">n\times n</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.66666em; vertical-align: -0.08333em;"></span><span class="mord mathdefault">n</span><span class="mspace" style="margin-right: 0.222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right: 0.222222em;"></span></span><span class="base"><span class="strut" style="height: 0.43056em; vertical-align: 0em;"></span><span class="mord mathdefault">n</span></span></span></span></span> matrix whose <span class="katex--inline"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mo stretchy="false">(</mo><mi>i</mi><mo separator="true">,</mo><mi>j</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(i,j)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mopen">(</span><span class="mord mathdefault">i</span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.166667em;"></span><span style="margin-right: 0.05724em;" class="mord mathdefault">j</span><span class="mclose">)</span></span></span></span></span> entry is <span class="katex--inline"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mstyle displaystyle="true" scriptlevel="0"><mi mathvariant="normal">corr</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mi>X</mi><mi>i</mi></msub><mo separator="true">,</mo><msub><mi>X</mi><mi>j</mi></msub><mo stretchy="false">)</mo></mstyle></mrow><annotation encoding="application/x-tex">{\displaystyle \operatorname {corr} (X_{i},X_{j})}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 1.03611em; vertical-align: -0.286108em;"></span><span class="mord"><span class="mop"><span class="mord mathrm">c</span><span class="mord mathrm">o</span><span class="mord mathrm">r</span><span class="mord mathrm">r</span></span><span class="mopen">(</span><span class="mord"><span style="margin-right: 0.07847em;" class="mord mathdefault">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.311664em;"><span class="" style="top: -2.55em; margin-left: -0.07847em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">i</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.166667em;"></span><span class="mord"><span style="margin-right: 0.07847em;" class="mord mathdefault">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.311664em;"><span class="" style="top: -2.55em; margin-left: -0.07847em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span style="margin-right: 0.05724em;" class="mord mathdefault mtight">j</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.286108em;"><span class=""></span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span></span> .  In statistical modelling, correlation matrices representing the relationships between variables are categorized into different correlation structures, which are distinguished by factors such as the number of parameters required to estimate them. A heat map is a graphical representation of data where the individual values contained in a matrix are represented as colors.</p>
+<h4 id="word-cloud">2.4.3 Word Cloud</h4>
+<p>Word cloud is a novelty visual representation of text data, typically used to depict keyword metadata (tags) on websites or to visualize free form text. Tags are usually single words, and the importance of each tag is shown with font size or color. This format is useful for quickly perceiving the most prominent terms to determine its relative prominence.</p>
+<h4 id="quartiles-and-iqr">2.4.4 Quartiles and IQR</h4>
+<p>Quantiles are cut points dividing the range of a probability distribution into continuous intervals with equal probabilities or dividing the observations in a sample in the same way. A quartile is a type of quantile which divides the number of data points into four more or less equal parts or quarters. The Interquartile Range (IQR) may be used to determine outliers in the case of quartiles:</p>
+<p><span class="katex--display"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mrow><mi mathvariant="normal">I</mi><mi mathvariant="normal">Q</mi><mi mathvariant="normal">R</mi></mrow><mo>=</mo><msub><mi mathvariant="normal">Q</mi><mn>3</mn></msub><mo>−</mo><msub><mi mathvariant="normal">Q</mi><mn>1</mn></msub><mspace linebreak="newline"></mspace><mtext>&nbsp;Lower&nbsp;fence&nbsp;</mtext><mo>=</mo><msub><mi>Q</mi><mn>1</mn></msub><mo>−</mo><mn>1.5</mn><mo stretchy="false">(</mo><mrow><mi mathvariant="normal">I</mi><mi mathvariant="normal">Q</mi><mi mathvariant="normal">R</mi></mrow><mo stretchy="false">)</mo><mspace linebreak="newline"></mspace><mtext>&nbsp;Upper&nbsp;fence&nbsp;</mtext><mo>=</mo><msub><mi>Q</mi><mn>3</mn></msub><mo>+</mo><mn>1.5</mn><mo stretchy="false">(</mo><mrow><mi mathvariant="normal">I</mi><mi mathvariant="normal">Q</mi><mi mathvariant="normal">R</mi></mrow><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{IQR}=\mathrm{Q}_{3}-\mathrm{Q}_{1}\\
+\text { Lower fence }=Q_{1}-1.5(\mathrm{IQR})\\
+\text { Upper fence }=Q_{3}+1.5(\mathrm{IQR})</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.87777em; vertical-align: -0.19444em;"></span><span class="mord"><span class="mord mathrm">I</span><span class="mord mathrm">Q</span><span class="mord mathrm">R</span></span><span class="mspace" style="margin-right: 0.277778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right: 0.277778em;"></span></span><span class="base"><span class="strut" style="height: 0.87777em; vertical-align: -0.19444em;"></span><span class="mord"><span class="mord"><span class="mord mathrm">Q</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.301108em;"><span class="" style="top: -2.55em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">3</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mspace" style="margin-right: 0.222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right: 0.222222em;"></span></span><span class="base"><span class="strut" style="height: 0.87777em; vertical-align: -0.19444em;"></span><span class="mord"><span class="mord"><span class="mord mathrm">Q</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.301108em;"><span class="" style="top: -2.55em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span></span><span class="mspace newline"></span><span class="base"><span class="strut" style="height: 0.69444em; vertical-align: 0em;"></span><span class="mord text"><span class="mord">&nbsp;Lower&nbsp;fence&nbsp;</span></span><span class="mspace" style="margin-right: 0.277778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right: 0.277778em;"></span></span><span class="base"><span class="strut" style="height: 0.87777em; vertical-align: -0.19444em;"></span><span class="mord"><span class="mord mathdefault">Q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.301108em;"><span class="" style="top: -2.55em; margin-left: 0em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mspace" style="margin-right: 0.222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right: 0.222222em;"></span></span><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord">1</span><span class="mord">.</span><span class="mord">5</span><span class="mopen">(</span><span class="mord"><span class="mord mathrm">I</span><span class="mord mathrm">Q</span><span class="mord mathrm">R</span></span><span class="mclose">)</span></span><span class="mspace newline"></span><span class="base"><span class="strut" style="height: 0.88888em; vertical-align: -0.19444em;"></span><span class="mord text"><span class="mord">&nbsp;Upper&nbsp;fence&nbsp;</span></span><span class="mspace" style="margin-right: 0.277778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right: 0.277778em;"></span></span><span class="base"><span class="strut" style="height: 0.87777em; vertical-align: -0.19444em;"></span><span class="mord"><span class="mord mathdefault">Q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.301108em;"><span class="" style="top: -2.55em; margin-left: 0em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">3</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mspace" style="margin-right: 0.222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right: 0.222222em;"></span></span><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord">1</span><span class="mord">.</span><span class="mord">5</span><span class="mopen">(</span><span class="mord"><span class="mord mathrm">I</span><span class="mord mathrm">Q</span><span class="mord mathrm">R</span></span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>Where Q1 and Q3 are the first and third quartiles, respectively, the lower fence is the “lower limit,” and the upper fence is the “upper limit” of data. Any data lying outside these defined bounds can be considered an outlier.</p>
+<p>In this project, we use outliers defined by quartiles to determine the most popular videos (by their views), which we will use in the prediction process.</p>
+<h3 id="questions--insights-for-us-dataset">2.5 Questions &amp; Insights for US dataset</h3>
+<p>Specifically, we used the US dataset as a representation, and we compared it with combined results from three countries. Based on the observations in  <a href="#2.2">section 2.2</a>, we classified our questions about the data into three groups:</p>
+<ul>
+<li>Trending Videos, Categories, and Channels</li>
+<li>Reviews Related</li>
+<li>Miscellaneous, including time, description, and tags.</li>
+</ul>
+<h4 id="trending-videos-categories-and-channels">2.5.1 Trending Videos, Categories and Channels</h4>
+<p>Below are the results we get when <code>views</code>,<code>categories</code>and <code>channels</code> are taken into consideration.</p>
+<ol>
+<li>
+<p><em>Top10 Most Trending Videos</em></p>
+
+<table>
+<thead>
+<tr>
+<th>Channel Name</th>
+<th>Title</th>
+<th>Category</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lucas and Marcus</td>
+<td>WE MADE OUR MOM CRY…HER DREAM CAME TRUE!</td>
+<td>Entertainment</td>
+</tr>
+<tr>
+<td>Charlie Puth</td>
+<td>Charlie Puth - BOY [Official Audio]</td>
+<td>Music</td>
+</tr>
+<tr>
+<td>Rooster Teeth</td>
+<td>Rooster Teeth Animated Adventures - Millie So Serious</td>
+<td>Film &amp; Animation</td>
+</tr>
+<tr>
+<td>grav3yardgirl</td>
+<td>Why I’m So Scared (being myself and crying too much)</td>
+<td>Howto &amp; Style</td>
+</tr>
+<tr>
+<td>SamSmithWorldVEVO</td>
+<td>Sam Smith - Pray (Official Video) ft. Logic</td>
+<td>Music</td>
+</tr>
+<tr>
+<td>Unbox Therapy</td>
+<td>The ULTIMATE $30,000 Gaming PC Setup</td>
+<td>Science &amp; Technology</td>
+</tr>
+<tr>
+<td>Complex</td>
+<td>YoungBoy Never Broke Again Goes Sneaker Shopping With Complex</td>
+<td>Entertainment</td>
+</tr>
+<tr>
+<td>nigahiga</td>
+<td>FORTNITE The Movie (Official Fake Trailer)</td>
+<td>Entertainment</td>
+</tr>
+<tr>
+<td>Selena Gomez</td>
+<td>Selena Gomez - Back To You (Lyric Video)</td>
+<td>Film &amp; Animation</td>
+</tr>
+<tr>
+<td>BostonDynamics</td>
+<td>Getting some air, Atlas?</td>
+<td>Science &amp; Technology</td>
+</tr>
+</tbody>
+</table><blockquote>
+<p>As can be seen, quite a few trending videos are from the entertainment/Film &amp; Animation/Music category, and many features ‘official’ in  their titles. We shall look for similar results in the following analyses.</p>
+</blockquote>
+</li>
+<li>
+<p><em>Top10 Most Trending Categories</em><br>
+<img src="https://i.loli.net/2020/01/11/KopRFnPZJ4I6miz.png" alt="1-2-2.png"></p>
+<blockquote>
+<p>The barplot shows that <code>entertainment</code> is the leading trending category on YouTube, twice the number of <code>music</code> which comes second.</p>
+</blockquote>
+</li>
+<li>
+<p><em>Top10 Most Trending Channels</em> :<br>
+<img src="https://i.loli.net/2020/01/11/RomCLaUbKY7GVcF.png" alt="1-2-3.png"></p>
+<blockquote>
+<p>Among the top 5 channels, 3 (TheEllenShow , The Tonight Show and Jimmy  Kimmel Live) are talk show channels, all contributors to entertainment’s category. Also, some sports channels (e.g., ESPN, NBA) and news channels (e.g., CNN, Vox) share some leading positions.</p>
+</blockquote>
+</li>
+<li>
+<p><em>Total &amp; Average Views Of Trending Videos By Categories</em><br>
+<img src="https://i.loli.net/2020/01/11/VrU5GP7blCt2ogS.png" alt="1-2-4.png"></p>
+<blockquote>
+<p>Though entertainment may be the most common category of trending videos, it is music videos that share the most views, both in total and on average, far more than any other category. Also, because of this, entertainment videos fall to the 5th position when it comes to average views. On the contrary, though <code>film &amp; animation</code> seems not as trending a category if we just consider video counts, it gets a surprising amount of views on average. The <code>gaming</code> category is also a black horse since it doesn’t even rank the top 10 on trending categories while takes the 3rd place in average views.</p>
+</blockquote>
+</li>
+<li>
+<p><em>Total &amp; Average Views Of Trending Videos By Channels</em>:<br>
+<img src="https://i.loli.net/2020/01/11/pd9r1WDVUoM6zQA.png" alt="1-2-5.png"></p>
+<blockquote>
+<p>Consistent with the results we have got before, music videos get most peeps among all categories, which is shown by reappearing 'VEVO’s (VEVO is the world’s largest all-premium music video provider) on the trending rank page. Except for Kylie Jenner, who shares beauty tutorials, all the channels that get most average views are music channels. However, channels that get most total views fall in various categories, like sports and entertainment.</p>
+</blockquote>
+</li>
+</ol>
+<h4 id="reviews-for-trendings">2.5.2 Reviews for Trendings</h4>
+<p>Below are the results we get when numerical features such as <code>views</code>, <code>likes</code>, <code>dislikes</code>, and <code>comment counts</code> are taken into consideration.</p>
+<ol start="6">
+<li>
+<p><em>Most Reviewed Videos, Likes &amp; Dislikes Count</em><br>
+<img src="https://i.loli.net/2020/01/11/a2LHou8jbkZyKp1.png" alt="1-2-6.png"></p>
+<blockquote>
+<p>Again, consistent with the previous results, most reviewed videos are music videos, and they are generally appreciated, and they all received over 2 million likes/dislikes.</p>
+</blockquote>
+</li>
+<li>
+<p><em>Most Reviewed Categories, Likes &amp; Dislikes Count</em><br>
+<img src="https://i.loli.net/2020/01/11/zkNFpQ14iEVvufr.png" alt="1-2-7.png"></p>
+<blockquote>
+<p>While music videos are the most viewed video category, <code>non-profit/activism</code> videos get most reviews among all, and also rank first in dislike rate. The total amount of likes is even less, maybe because it’s a rather controversial and sensitive topic. These two categories, in total, get more reviews than the following eight. Also, the <code>gaming</code> category rank 3rd, being a black horse again. In contrast, the <code>entertainment</code> category, though generally appreciated by people, do not get so many reviews.</p>
+</blockquote>
+</li>
+<li>
+<p><em>Most Reviewed Channels, Likes &amp; Dislikes Count</em><br>
+<img src="https://i.loli.net/2020/01/11/eh8d2VlmMX567DW.png" alt="1-2-8.png"></p>
+<blockquote>
+<p>Most channels reappear from the most viewed channels and get an equal amount of appreciation for their views. Some do get more dislikes than others.</p>
+</blockquote>
+</li>
+<li>
+<p><em>Video Views With Respect To Their Reviews Count, Likes &amp; Dislikes</em><br>
+<img src="https://i.loli.net/2020/01/11/qsbn2Pi6oNJUdzT.png" alt="1-2-9.png"></p>
+<blockquote>
+<p>As can be seen, the more a video gets viewed in general, the more likes it will receive, and it’s the same with dislikes, except that it grows far slower than likes. As for the outliers which receive unexpected views from the audience (points with biggest areas), they have a higher rate of receiving dislikes than those not-so-popular videos. Still, generally, the dislike rate remains small. Still, some poor videos are infamous for the vast dislikes they receive, constituting another outlier group.</p>
+</blockquote>
+</li>
+<li>
+<p><em>Correlation Between Views, Likes, Dislikes, and Comments</em><br>
+<img src="https://i.loli.net/2020/01/11/SEbFLprG38Bhf5K.png" alt="1-2-10.png"></p>
+<blockquote>
+<p>The correlation matrix gives a numerical explanation of previous results – the more views the videos get, the more appreciation and depreciation they will receive (all entries are positive). Still, they tend to be more appreciated (0.85 &gt; 0.47). The comment rate also goes up when there are more views, and it seems that positive ones take domination (0.8 &gt; 0.7).</p>
+</blockquote>
+</li>
+</ol>
+<h4 id="miscellaneous">2.5.3 Miscellaneous</h4>
+<p>Below are the results we get when <code>time</code>, <code>title</code>, <code>tags</code>and <code>descriptions</code> are taken into consideration.</p>
+<ol start="11">
+<li>
+<p><em>Best Time To Publish A Video In Order To Get Trending</em><br>
+Will the publish time in a day affect the popularity of the videos? We shall look into this question.</p>
+<p><img src="https://i.loli.net/2020/01/11/ezvFlsO4pUNqQhK.png" alt="1-2-11.png"></p>
+<blockquote>
+<p>Much to our surprise, the answer is yes, and the results are salient – those who are published in the afternoon (14-18) win most views, and the ones pop up at night also share good views. But be careful first – we don’t know what time zone the publish time column falls in. Thankfully we have some online tools to determine and turns out all the time in this dataset is UTC. The time zone in the US continent ranges from UTC-5 (Eastern Standard Time) to UTC-8 (Pacific standard time), so the best local time to publish a video in the US can be anywhere from 9 to 13. Since some of the videos are not uploaded by US natives, and we cannot determine how visits of YouTube Websites vary in different regions based solely on this dataset, the results cannot be explored further. But to put up a potential eye-catcher in the morning may not be a bad choice.</p>
+</blockquote>
+</li>
+<li>
+<p><em>WordCloud For Titles, Descriptions, And Tags</em><br>
+Word cloud is a very intuitive way to show frequency (or importance) of the words that appeared in the text. We used it to illustrate the dominant words in titles, tags, and descriptions:</p>
+<ul>
+<li><code>titles</code>:<br>
+<img src="https://i.loli.net/2020/01/11/3y4Qwt9ZSKoiEkx.png" alt="1-2-12-1.png"></li>
+<li><code>descriptions</code>:<br>
+<img src="https://i.loli.net/2020/01/11/hfYpyP1Fk6T2biD.png" alt="1-2-12-2.png"></li>
+<li><code>tags</code>:<br>
+<img src="https://i.loli.net/2020/01/11/gfHp68GJU4rhDek.png" alt="1-2-12-3.png"></li>
+</ul>
+<blockquote>
+<p>Surprisingly, besides words that are related to entertainment (e.g., official, movie, and Marvel, etc.), words that hint serious political topics (e.g., black, Iraq, Iran, Healthcare) pop up in word clouds.  According to previous results, news &amp; politics category does share a lot of views, but not dominant. Maybe this is because these topics are heavily concentrated on such issues as Iraq&amp;Iran and healthcare policy, in contrast to the various title names music videos can have.</p>
+</blockquote>
+</li>
+</ol>
+<h4 id="summary">2.5.4 Summary</h4>
+<p>The basic aggregation groups we used in the analysis are their categories and channels.  If we are not interested in specific channels, the category of the video is more of importance, and channels also fall in different categories, so we can aggregate again. Also, the most important numerical feature we fathom through the process is the views, along with its aggregation (total and average), likes/dislikes, and comment counts.</p>
+<p>The fundamental result we concluded from the EDA process on US dataset is: <em><strong>US people surf YouTube mostly for fun, also sometimes for serious topics.</strong></em> Specifically, there <em>are</em> some categories that we find interesting to talk about:</p>
+<ul>
+<li>
+<p><strong>Entertainment</strong>: They are the most trending category if we consider its proportion among trending videos, but do not get many views and reviews. In conclusion, this category is generally appreciated by the audience, but either because people cannot get too fanatical about a hilarious talk show as they do to a pop music video, or there are just too many options and people are distracted by its variousness, it is not the most popular category on YouTube.</p>
+</li>
+<li>
+<p><strong>Music /Film &amp; Animation</strong>: Music videos are among the most popular categories on YouTube. They receive most views and reviews, and most of them are positive, similar to Film &amp; Animation. The <em>official</em> thing seems to be attractive to the audience, or we can say YouTube is generally considered the biggest hub of <em>official</em> music videos, movie trailers, and soundtracks, so no wonder for their popularity on this platform.</p>
+</li>
+<li>
+<p><strong>Gaming</strong>: It’s a black horse worth mentioning for its statistical traits. It does not have a wide range of audience since it is not a trending category, but it seems to have a solid, loyal audience group which will give their dedication to specific videos and contribute a lot to their views and reviews, making them in the 3rd place of the rank page.</p>
+</li>
+<li>
+<p><strong>Non-profit &amp; Activism</strong>: It’s one of the categories that receive 4th average views and most reviews, and most importantly, have an unignorable amount of dislikes. It can be inferred that some of them may be controversial and sensitive enough to arouse wide disagreement. (Just like Greta Thunberg. Some of her recent videos on YouTube have received over 3 million views and get nearly equal amounts of likes and dislikes, somewhat supportive to this hypothesis).</p>
+</li>
+<li>
+<p><strong>News &amp; Politics</strong>: It’s a relatively hot category regarding both counts and views, though not at all the hottest. But the word clouds show that the topics are concentrated enough to make some keywords reappear in titles, tags, and descriptions of the videos, resulting in their saliency (it is based on the hypothesis that title words of the news are more concentrated than music and entertainment videos are, and it can be examined by cluster analysis methods). However, it seems that people do not have the same desire to review them as they do to music videos or non-profit videos.</p>
+</li>
+</ul>
+<p>Also, people’s habits and tendency to leave reviews are worth some discussion:</p>
+<ul>
+<li><em>The more a video gets viewed in general, the more likes it will receive; the dislike rate will slightly grow simultaneously but not exceed to a certain threshold.</em></li>
+<li><em>US people tend to leave more positive feedbacks to trending videos than negative ones. But some videos are indeed infamous enough to arouse public hate, and people won’t bother to show their antipathy.</em></li>
+<li><em>US people tend to show affection to videos that please their taste (e.g., music and games they love),  or express their opinions on controversial public topics. However, they don’t show much attitude toward political issues.</em></li>
+</ul>
+<p>Finally, the possible best time to publish a video to get trending may be in the morning for US people. It is hard to give a plausible explanation, though, since all came to my mind is that people may find fresh, interesting videos at lunch break, which builds up first waves, and it determines what one will see next after work in the evening until then it becomes a huge tide. But it is hardly convincing, and we may need to know such info as the daily schedule for ordinary Americans or how YouTube channels are run by their owners to determine its mechanism. Whatever the case, one thing for sure is that the publish time of a video does relate to its future popularity, so further exploration is worthy.</p>
+<h3 id="questions--insights-for-datasets-of-english-speaking-countries">2.6 Questions &amp; Insights for Datasets of English-Speaking Countries</h3>
+<p>The US, GB, CA datasets have 40949, 38916, 40881 entries, respectively, so the combined dataset is not skewed to its US component. The EDA process here is to make some comparisons to the US dataset and prepare for predictions.</p>
+<h4 id="trending-videos-categories-and-channels-1">2.6.1 Trending Videos, Categories and Channels</h4>
+<ol>
+<li>
+<p><em>Top10 Most Trending Videos</em></p>
+
+<table>
+<thead>
+<tr>
+<th>Channel Name</th>
+<th>Title</th>
+<th>Category</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SamSmithWorldVEVO</td>
+<td>Sam Smith - Pray (Official Video) ft. Logic</td>
+<td>Music</td>
+</tr>
+<tr>
+<td>ChildishGambinoVEVO</td>
+<td>Childish Gambino - This Is America (Official Video)</td>
+<td>Music</td>
+</tr>
+<tr>
+<td>BostonDynamics</td>
+<td>Getting some air, Atlas?</td>
+<td>Science &amp; Technology</td>
+</tr>
+<tr>
+<td>EnriqueIglesiasVEVO</td>
+<td>Enrique Iglesias - MOVE TO MIAMI (Official Video) ft. Pitbull</td>
+<td>Music</td>
+</tr>
+<tr>
+<td>Marvel Entertainment</td>
+<td>Marvel Studios’ Ant-Man and The Wasp - Official Trailer</td>
+<td>Entertainment</td>
+</tr>
+<tr>
+<td>Kanye West</td>
+<td>kanye west / charlamagne interview</td>
+<td>People &amp; Blogs</td>
+</tr>
+<tr>
+<td>CelineDionVEVO</td>
+<td>Céline Dion - Ashes (from the Deadpool 2 Motion Picture Soundtrack)</td>
+<td>Music</td>
+</tr>
+<tr>
+<td>FlorenceMachineVEVO</td>
+<td>Florence + The Machine - Hunger</td>
+<td>Music</td>
+</tr>
+<tr>
+<td>Lionsgate Movies</td>
+<td>Robin Hood (2018 Movie) Teaser Trailer – Taron Egerton, Jamie Foxx, Jamie Dornan</td>
+<td>Film &amp; Animation</td>
+</tr>
+<tr>
+<td>Disney•Pixar</td>
+<td>Incredibles 2 Official Trailer</td>
+<td>Film &amp; Animation</td>
+</tr>
+</tbody>
+</table><blockquote>
+<p>This rank list shared 2 videos with the US one: "Sam Smith - Pray (Official Video) ft. Logic "from "SamSmithWorldVEVO``and "Getting some air, Atlas? "from "BostonDynamics ". And again, music videos dominate.</p>
+</blockquote>
+</li>
+<li>
+<p><em>Top10 Most Trending Categories</em><br>
+<img src="https://i.loli.net/2020/01/11/gzfFvlxi7OD1LJI.jpg" alt="1-3-2.jpeg"></p>
+<blockquote>
+<p>Compared to previous results, both datasets share the top 7 categories but have different preferences. The other two countries seem to pay more attention to News &amp; Politics(2nd vs. 5th) and People &amp; Blog(3rd vs. 6th), while Howto &amp; Style(7th vs. 3rd) is not as popular. Still, both favor entertainment (1st vs. 1st) and music (4th vs. 2nd) as a diversion.</p>
+</blockquote>
+</li>
+<li>
+<p><em>Top10 Most Trending Channels</em><br>
+<img src="https://i.loli.net/2020/01/11/z7Lwi8CGUjpWmvD.png" alt="1-3-3.png"></p>
+<blockquote>
+<p>There are some surprising results when it comes to top channels:<br>
+1. ESPN is the most popular channel of both,  along with two talk shows.<br>
+2. American news channels such as CNN, MSNBC have more popularity beyond the US.<br>
+3. Most entertainment channels have Indian and Pakistan content (VikatanTV, SET India, Radaan Media, and ARY Digital). According to ARY Digital, this is due to the increasing need for such content in Great Britain.</p>
+</blockquote>
+</li>
+</ol>
+<h4 id="closer-look-on-titles">2.6.2 Closer Look On Titles</h4>
+<ol start="4">
+<li>*Most Popular Words For Titles Of Trending Videos *<br>
+<img src="https://i.loli.net/2020/01/11/YPtK73SjqNhoOvF.png" alt="1-3-4-1.png"><img src="https://i.loli.net/2020/01/11/IxO8k9m5YDiCzhu.png" alt="1-3-4-2.png"><img src="https://i.loli.net/2020/01/11/QouWnpb54NBtPVe.png" alt="1-3-4-3.png">
+<blockquote>
+<p>The word (and gram) frequency shows a similar result of the US, that official music videos/movie trailers in the year(the dataset includes 2017 and 2018 trending videos) are among the hottest videos. Also, highlight moments of games and punjabi songs share some attention, another manifestation of India culture impact among these countries.</p>
+</blockquote>
+</li>
+</ol>
+<h4 id="summary-1">2.6.3 Summary</h4>
+<p>Basically, <em><strong>the tendencies are similar in the US dataset and combined dataset</strong></em>. However, there are some notable differences:</p>
+<ul>
+<li>News and Politics are more welcomed by Great Britain and Canada.</li>
+<li>India (and Pakistan) culture has a greater impact, maybe because of Great Britain.</li>
+</ul>
+<h2 id="predictions">3. Predictions</h2>
+<h3 id="logistic-regression-to-predict-popularity-of-words-in-titles-determined-by-tf-idf">3.1 Logistic Regression To Predict Popularity Of Words In Titles Determined by TF-IDF</h3>
+<h4 id="logistic-regression">3.1.1 Logistic Regression</h4>
+<p>Logistic regression is the basic method to execute a binary classification task. Explanations are omitted.</p>
+<h4 id="feature-engineering-tf-idf">3.1.2 Feature Engineering: TF-IDF</h4>
+<p>TF-IDF analyzes the impact of tokens (words) throughout the whole documents. For example, the more times a word appears in a document (each title), the more weight it will have. However, the more documents (titles) the word appears in, it is “penalized,” and the weight is diminished because it is empirically less informative than features that occur in a small fraction of the training corpus (source)</p>
+<p><span class="katex--display"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><msub><mi>t</mi><mrow><mi>i</mi><mi>d</mi></mrow></msub><mo>=</mo><mfrac><msub><mi>n</mi><mrow><mi>i</mi><mi>d</mi></mrow></msub><msub><mi>n</mi><mi>d</mi></msub></mfrac><mi>log</mi><mo>⁡</mo><mfrac><mi>N</mi><msub><mi>n</mi><mi>i</mi></msub></mfrac></mrow><annotation encoding="application/x-tex">
+t_{i d}=\frac{n_{i d}}{n_{d}} \log \frac{N}{n_{i}}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.76508em; vertical-align: -0.15em;"></span><span class="mord"><span class="mord mathdefault">t</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.336108em;"><span class="" style="top: -2.55em; margin-left: 0em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">i</span><span class="mord mathdefault mtight">d</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mspace" style="margin-right: 0.277778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right: 0.277778em;"></span></span><span class="base"><span class="strut" style="height: 2.19633em; vertical-align: -0.836em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 1.10756em;"><span class="" style="top: -2.314em;"><span class="pstrut" style="height: 3em;"></span><span class="mord"><span class="mord"><span class="mord mathdefault">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.336108em;"><span class="" style="top: -2.55em; margin-left: 0em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">d</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span></span></span><span class="" style="top: -3.23em;"><span class="pstrut" style="height: 3em;"></span><span class="frac-line" style="border-bottom-width: 0.04em;"></span></span><span class="" style="top: -3.677em;"><span class="pstrut" style="height: 3em;"></span><span class="mord"><span class="mord"><span class="mord mathdefault">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.336108em;"><span class="" style="top: -2.55em; margin-left: 0em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">i</span><span class="mord mathdefault mtight">d</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.836em;"><span class=""></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right: 0.166667em;"></span><span class="mop">lo<span style="margin-right: 0.01389em;">g</span></span><span class="mspace" style="margin-right: 0.166667em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 1.36033em;"><span class="" style="top: -2.314em;"><span class="pstrut" style="height: 3em;"></span><span class="mord"><span class="mord"><span class="mord mathdefault">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.311664em;"><span class="" style="top: -2.55em; margin-left: 0em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">i</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span></span></span><span class="" style="top: -3.23em;"><span class="pstrut" style="height: 3em;"></span><span class="frac-line" style="border-bottom-width: 0.04em;"></span></span><span class="" style="top: -3.677em;"><span class="pstrut" style="height: 3em;"></span><span class="mord"><span style="margin-right: 0.10903em;" class="mord mathdefault">N</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.836em;"><span class=""></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span></span></p>
+<p>Where:</p>
+<ul>
+<li><span class="katex--inline"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><msub><mi>n</mi><mrow><mi>i</mi><mi>d</mi></mrow></msub></mrow><annotation encoding="application/x-tex">n_{id}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.58056em; vertical-align: -0.15em;"></span><span class="mord"><span class="mord mathdefault">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.336108em;"><span class="" style="top: -2.55em; margin-left: 0em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">i</span><span class="mord mathdefault mtight">d</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span></span></span></span></span> : occurrences of word <span class="katex--inline"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.65952em; vertical-align: 0em;"></span><span class="mord mathdefault">i</span></span></span></span></span> in document <span class="katex--inline"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.69444em; vertical-align: 0em;"></span><span class="mord mathdefault">d</span></span></span></span></span></li>
+<li><span class="katex--inline"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><msub><mi>n</mi><mi>d</mi></msub></mrow><annotation encoding="application/x-tex">n_{d}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.58056em; vertical-align: -0.15em;"></span><span class="mord"><span class="mord mathdefault">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.336108em;"><span class="" style="top: -2.55em; margin-left: 0em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">d</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span></span></span></span></span> : words in document <span class="katex--inline"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.69444em; vertical-align: 0em;"></span><span class="mord mathdefault">d</span></span></span></span></span></li>
+<li><span class="katex--inline"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.68333em; vertical-align: 0em;"></span><span style="margin-right: 0.10903em;" class="mord mathdefault">N</span></span></span></span></span>: documents in corpus</li>
+<li><span class="katex--inline"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><msub><mi>n</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">n_i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.58056em; vertical-align: -0.15em;"></span><span class="mord"><span class="mord mathdefault">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.311664em;"><span class="" style="top: -2.55em; margin-left: 0em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span></span></span></span></span>: documents word <span class="katex--inline"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.65952em; vertical-align: 0em;"></span><span class="mord mathdefault">i</span></span></span></span></span> occurs in whole corpus</li>
+</ul>
+<h4 id="model-design">3.1.3 Model Design</h4>
+<p>First, we use TF-IDF to extract features of the corpus, and ``max_features = 10000 ". The popularity of the videos is determined by outliers of quartiles in views. Then simple logistic regression is used to  fit the data, with regularization "C = 0.1 "</p>
+<h4 id="prediction-results">3.1.4 Prediction Results</h4>
+<p>Here are three examples of the result: 1 and 3 are labeled ‘popular’ while 2 is labeled ‘normal’.</p>
+<p><img src="https://i.loli.net/2020/01/11/uf9vxNRLbTEHMce.png" alt="2-1-1.png"><br>
+<img src="https://i.loli.net/2020/01/11/7KOSBelGVZIC49Q.png" alt="2-1-2.png"><br>
+<img src="https://i.loli.net/2020/01/11/sVZaFbp1qrw9MRK.png" alt="2-1-3.png"><br>
+From the results, we can see the model itself fits perfectly, but its interpretability is questionable. On the one hand, it may due to TF-IDF method itself, which consider words that appear too frequently as a cliche that should be penalized, so one can see that ‘official’ ‘video’ and ‘trailer’ may be considered heavy hints of a normal video, whereas these are just category labels; on the other, we hope to find useful features that decide the videos’ popularity, but based on its feedback, we can hardly gain any knowledge why these highlighted words make the video popular. We cannot exclude the possibility that it is the result of overfitting. In conclusion, this prediction method is not working.</p>
+<h3 id="predictions-on-popularity-of-words-in-titles-in-6-most-trending-categories-using-latent-dirichlet-allocation">3.2 Predictions on Popularity of Words in Titles In 6 Most Trending Categories Using Latent Dirichlet Allocation</h3>
+<h4 id="introduction-to-latent-dirichlet-allocation">3.2.1 Introduction to Latent Dirichlet Allocation</h4>
+<p>In natural language processing, latent Dirichlet allocation (LDA) is a generative statistical model that allows sets of observations to be explained by unobserved groups that explain why some parts of the data are similar. For example, if observations are words collected into documents, it posits that each document is a mixture of a small number of topics and that each word’s presence is attributable to one of the document’s topics. In LDA, the topic distribution is assumed to have a sparse Dirichlet prior. The sparse Dirichlet priors encode the intuition that documents cover only a small set of topics and that topics use only a small set of words frequently. A topic is neither semantically nor epistemologically strongly defined. It is identified based on automatic detection of the likelihood of term co-occurrence.</p>
+<p>Details of the algorithm can be superfluous, so they are omitted.</p>
+<h4 id="model-design-1">3.2.2 Model Design</h4>
+<p>First, we use "CountVectorizer "to do feature extraction, which converts the titles to a matrix of token counts, then send them to LDA learner, which divide the corpse into 7 topics, <code>max_iteration = 10</code>, then visualize the result.</p>
+<h4 id="prediction-results-1">3.2.3 Prediction Results</h4>
+<p>We have examined the top 6 categories that trended and compared the prediction results with actual results. The graphs are interactive, and we recommend running the notebook yourself to get more information. See <a href="#app">Appendix</a>.</p>
+<h5 id="entertainment">Entertainment</h5>
+<p><img src="https://i.loli.net/2020/01/11/IxPfyUkATJwY8qG.png" alt="2-2-1.png"></p>
+<h5 id="news--politics">News &amp; Politics</h5>
+<p><img src="https://i.loli.net/2020/01/11/XilWJP8ztUbxK6M.png" alt="2-2-2.png"></p>
+<h5 id="people--blogs">People &amp; Blogs</h5>
+<p><img src="https://i.loli.net/2020/01/11/8jqkUgOmXIMh3ZG.png" alt="2-2-3.png"></p>
+<h5 id="music">Music</h5>
+<p><img src="https://i.loli.net/2020/01/11/ZxshWXt8ofJq79e.png" alt="2-2-4.png"></p>
+<h5 id="sports">Sports</h5>
+<p><img src="https://i.loli.net/2020/01/11/Nk2qMuTdaLvfWGJ.png" alt="2-2-5.png"></p>
+<h5 id="comedy">Comedy</h5>
+<p><img src="https://i.loli.net/2020/01/11/NfIcYaUewJWriCQ.png" alt="2-2-6.png"><br>
+As is shown from the graph,  the LDA method does give satisfying results. The topic number as a hyperparameter can still be fine-tuned later on (the results have already been salient, but topics can be even more). Generally, the LDA method, combined with single counting, can give an estimation of term frequency in a  single topic, so it won’t penalize cliche words as logistic regression combined with TF-IDF does. More importantly, it gives relative importance to the word, and the results are mostly accurate. So it indeed gives insights on what words lead to popularity and how much they contribute. One thing worth mentioning is that LDA won’t give an extreme estimation of frequency, so the accuracy of extreme cases  (e.g., music) may be lower; however, it can keep the general trend correct.</p>
+<h3 id="trending-titles-generation-using-lstm">3.3 Trending Titles Generation Using LSTM</h3>
+<h4 id="introduction-to-lstm">3.3.1 Introduction to LSTM</h4>
+<p>LSTM  is based on RNN. The memory state in RNNs gives an advantage over traditional neural networks, but a problem called Vanishing Gradient is associated with them. In this problem, while learning with a large number of layers, it becomes hard for the network to learn and tune the parameters of the earlier layers. Therefore, A new type of RNNs called LSTMs (Long Short Term Memory) Models have been developed.</p>
+<p>LSTMs have an additional state called ‘cell state’ through which the network makes adjustments in the information flow. The advantage of this state is that the model can remember or forget the leanings more selectively:</p>
+<p><img src="https://i.loli.net/2020/01/11/W2v7g6dtsxOmX4j.png" alt="2-3.png"></p>
+<h4 id="model-design-2">3.3.2 Model Design</h4>
+<p>First, we will tokenize and sequential all the title data and pad them to ensure they have the same length before sending them to the LSTM model. Generally, an LSTM model has 4 kinds of layers:</p>
+<ul>
+<li><strong>Input Layer</strong>: Takes the sequence of words as input.</li>
+<li><strong>LSTM Layer</strong>: Computes the output using LSTM units. We have added 100 units in the layer, and it can be fine-tuned later.</li>
+<li><strong>Dropout Layer</strong>: A regularization layer which randomly turns-off the activations of some neurons in the LSTM layer. It helps in preventing overfitting. The dropout rate is set to 0.1.</li>
+<li><strong>Output Layer</strong>: Computes the probability of the best possible next word as output. We use softmax as activation method, cross-entropy as our loss function, and Adam as our optimizer.</li>
+</ul>
+<p>We will train this model with 50 epochs, which can also be experimented further.<br>
+The summary of the model is listed below:</p>
+
+<table>
+<thead>
+<tr>
+<th>Layer (type)</th>
+<th>Output Shape</th>
+<th>Param #</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>embedding_1 (Embedding)</td>
+<td>(None, 25, 10)</td>
+<td>77060</td>
+</tr>
+<tr>
+<td>lstm_1 (LSTM)</td>
+<td>(None, 100)</td>
+<td>44400</td>
+</tr>
+<tr>
+<td>dropout_1 (Dropout)</td>
+<td>(None, 100)</td>
+<td>0</td>
+</tr>
+<tr>
+<td>dense_1 (Dense)</td>
+<td>(None, 7706)</td>
+<td>778306</td>
+</tr>
+</tbody>
+</table><pre><code>Total params: 899,766
+Trainable params: 899,766
+Non-trainable params: 0
+</code></pre>
+<h4 id="prediction-results-2">3.3.3 Prediction Results</h4>
+<p>Using  some popular words as seeds we can  generate titles from the LSTM model.</p>
+<pre><code>print (generate_text("Trump", 5, model, max_sequence_len))
+print (generate_text("avengers", 8, model, max_sequence_len))
+print (generate_text("episode", 6, model, max_sequence_len))
+print (generate_text("iraq", 5, model, max_sequence_len))
+print (generate_text("punjabi", 5, model, max_sequence_len))
+print (generate_text("taylor", 7, model, max_sequence_len))
+</code></pre>
+<p>Below are the corresponding results.</p>
+<pre><code>Trump Wants Feinstein Makes Racist Immigration
+Avengers Infinity War Cast Reveals Stole Set Marvel ”
+Episode 2 Lalkar Velaiilla Pattadhari 2 2018
+Iraq Laachi Logo Muchh Trump Trampoline
+Punjabi Got Talent 2018 Auditions Kristel
+Taylor Swift Delicate Vertical Version Ft Chris Xcx
+</code></pre>
+<p>As can be seen, some titles (like the first one) do seem make sense both syntactically and semantically, while others (like the Iraq one) don’t seem to have any inner structure or meaning.  This implies that the LSTM model can be of some use if is fine tuned.</p>
+<h3 id="summary-2">3.4 Summary</h3>
+<p>Together we have used 3 methods in prediction: Logistic Regression, LDA, and LSTM(as a generator). The Logistic Regression method suffers from its TF-IDF feature selection method and basically is too simple; the LDA method is a complex Bayesian method that gives good prediction results; LSTM is a commonly used title generator with good potential.  The hyperparameters in the latter two methods can be finer tuned later on.</p>
+<h2 id="conclusion">4 Conclusion</h2>
+<p>There is so much to find in the YouTube trending videos dataset. Through this project, we have done extensive EDA on a small part of the dataset, and the results are already beyond imagination, and some are worth further exploration. If the same things were conducted on the rest of the dataset, there would be more interesting conclusions. These fun facts can not only give one insight on how modern media like YouTube work and reveal different facets of modern society but also be of great use for those who want to <em>predict</em> and <em>make</em> popularity. We have taken the first steps by trying various machine learning models, some even beyond what we have learned in class. Hard though they seem, we somehow manage to get them to work and receive fairly good results.</p>
+<p>Still, due to time limitations, we have no chance to design more powerful features, tune the parameters or dive deeper into the theories to fully grasp the methods we have used, and all evaluation methods we know is not applicable here, so we have missed the chance to practice what we have learned in class. That’s where our dissatisfaction has come from and is what we want to achieve if given the next chance to conduct another data science project. We do hope we can carry on what we have achieved through this project – how to raise questions to datasets, conduct EDA, choose and implement algorithms down to runnable codes and give insights on the results, to take steps closer to mastery in data science.</p>
+<h2 id="span-id--appappendix-anaconda-environment-configuration-span"><span id="app">Appendix: Anaconda Environment Configuration </span></h2>
+<p>All things that need to run the notebook is stored in this <code>.yml</code> file. To import, simply run</p>
+<pre class=" language-sh"><code class="prism  language-sh">conda env create -f file_name.yml
+</code></pre>
+<hr>
+<pre class=" language-yml"><code class="prism  language-yml"><span class="token key atrule">name</span><span class="token punctuation">:</span> env_pro_ds<span class="token comment"># you can use whatever name you like</span>
+
+<span class="token key atrule">channels</span><span class="token punctuation">:</span>
+
+<span class="token punctuation">-</span> bioconda
+
+<span class="token punctuation">-</span> conda<span class="token punctuation">-</span>forge
+
+<span class="token punctuation">-</span> https<span class="token punctuation">:</span>//mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch/
+
+<span class="token punctuation">-</span> https<span class="token punctuation">:</span>//mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/menpo/
+
+<span class="token punctuation">-</span> https<span class="token punctuation">:</span>//mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/bioconda/
+
+<span class="token punctuation">-</span> https<span class="token punctuation">:</span>//mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/msys2/
+
+<span class="token punctuation">-</span> https<span class="token punctuation">:</span>//mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda<span class="token punctuation">-</span>forge/
+
+<span class="token punctuation">-</span> defaults
+
+<span class="token key atrule">dependencies</span><span class="token punctuation">:</span>
+
+<span class="token punctuation">-</span> absl<span class="token punctuation">-</span>py=0.9.0=py37_0
+
+<span class="token punctuation">-</span> appnope=0.1.0=py37_1000
+
+<span class="token punctuation">-</span> astor=0.7.1=py_0
+
+<span class="token punctuation">-</span> astroid=2.3.3=py37_0
+
+<span class="token punctuation">-</span> astropy=4.0=py37h0b31af3_0
+
+<span class="token punctuation">-</span> attrs=19.3.0=py_0
+
+<span class="token punctuation">-</span> backcall=0.1.0=py_0
+
+<span class="token punctuation">-</span> bleach=3.1.0=py_0
+
+<span class="token punctuation">-</span> c<span class="token punctuation">-</span>ares=1.15.0=h01d97ff_1001
+
+<span class="token punctuation">-</span> ca<span class="token punctuation">-</span>certificates=2019.11.28=hecc5488_0
+
+<span class="token punctuation">-</span> catalogue=0.2.0=py_0
+
+<span class="token punctuation">-</span> cctools=927.0.2=h5ba7a2e_3
+
+<span class="token punctuation">-</span> certifi=2019.11.28=py37_0
+
+<span class="token punctuation">-</span> cffi=1.13.2=py37h33e799b_0
+
+<span class="token punctuation">-</span> chardet=3.0.4=py37_1003
+
+<span class="token punctuation">-</span> chart<span class="token punctuation">-</span>studio=1.0.0=py_0
+
+<span class="token punctuation">-</span> clang=9.0.1=default_hf57f61e_0
+
+<span class="token punctuation">-</span> clang_osx<span class="token punctuation">-</span>64=9.0.1=h05bbb7f_0
+
+<span class="token punctuation">-</span> clangxx=9.0.1=default_hf57f61e_0
+
+<span class="token punctuation">-</span> clangxx_osx<span class="token punctuation">-</span>64=9.0.1=h05bbb7f_0
+
+<span class="token punctuation">-</span> compiler<span class="token punctuation">-</span>rt=9.0.1=h6a512c6_0
+
+<span class="token punctuation">-</span> compiler<span class="token punctuation">-</span>rt_osx<span class="token punctuation">-</span>64=9.0.1=h6a512c6_0
+
+<span class="token punctuation">-</span> confuse=1.0.0=py_0
+
+<span class="token punctuation">-</span> cryptography=2.8=py37hafa8578_1
+
+<span class="token punctuation">-</span> cycler=0.10.0=py_2
+
+<span class="token punctuation">-</span> cymem=2.0.3=py37h4a8c4bd_0
+
+<span class="token punctuation">-</span> cython<span class="token punctuation">-</span>blis=0.4.1=py37h0b31af3_0
+
+<span class="token punctuation">-</span> decorator=4.4.1=py_0
+
+<span class="token punctuation">-</span> defusedxml=0.6.0=py_0
+
+<span class="token punctuation">-</span> entrypoints=0.3=py37_1000
+
+<span class="token punctuation">-</span> freetype=2.10.0=h24853df_1
+
+<span class="token punctuation">-</span> funcy=1.14=py_0
+
+<span class="token punctuation">-</span> future=0.18.2=py37_0
+
+<span class="token punctuation">-</span> gast=0.3.2=py_0
+
+<span class="token punctuation">-</span> grpcio=1.23.0=py37h8a88325_0
+
+<span class="token punctuation">-</span> h5py=2.10.0=nompi_py37h106b333_101
+
+<span class="token punctuation">-</span> hdf5=1.10.5=nompi_h3e39495_1104
+
+<span class="token punctuation">-</span> htmlmin=0.1.12=py_1
+
+<span class="token punctuation">-</span> hypothesis=5.1.1=py_0
+
+<span class="token punctuation">-</span> idna=2.8=py37_1000
+
+<span class="token punctuation">-</span> importlib_metadata=1.3.0=py37_0
+
+<span class="token punctuation">-</span> ipykernel=5.1.3=py37h5ca1d4c_0
+
+<span class="token punctuation">-</span> ipython=7.11.1=py37h5ca1d4c_0
+
+<span class="token punctuation">-</span> ipython_genutils=0.2.0=py_1
+
+<span class="token punctuation">-</span> isort=4.3.21=py37_0
+
+<span class="token punctuation">-</span> jedi=0.15.2=py37_0
+
+<span class="token punctuation">-</span> jinja2=2.10.3=py_0
+
+<span class="token punctuation">-</span> joblib=0.14.1=py_0
+
+<span class="token punctuation">-</span> jpeg=9c=h1de35cc_1001
+
+<span class="token punctuation">-</span> jsonschema=3.2.0=py37_0
+
+<span class="token punctuation">-</span> jupyter_client=5.3.4=py37_0
+
+<span class="token punctuation">-</span> jupyter_core=4.6.1=py37_0
+
+<span class="token punctuation">-</span> keras=2.3.1=py37_0
+
+<span class="token punctuation">-</span> keras<span class="token punctuation">-</span>applications=1.0.8=py_1
+
+<span class="token punctuation">-</span> keras<span class="token punctuation">-</span>preprocessing=1.1.0=py_0
+
+<span class="token punctuation">-</span> kiwisolver=1.1.0=py37ha1b3eb9_0
+
+<span class="token punctuation">-</span> lazy<span class="token punctuation">-</span>object<span class="token punctuation">-</span>proxy=1.4.3=py37h0b31af3_0
+
+<span class="token punctuation">-</span> ld64=450.3=h3c32e8a_3
+
+<span class="token punctuation">-</span> libblas=3.8.0=14_openblas
+
+<span class="token punctuation">-</span> libcblas=3.8.0=14_openblas
+
+<span class="token punctuation">-</span> libcxx=9.0.1=1
+
+<span class="token punctuation">-</span> libffi=3.2.1=1
+
+<span class="token punctuation">-</span> libgfortran=4.0.0=2
+
+<span class="token punctuation">-</span> libgpuarray=0.7.6=h1de35cc_1003
+
+<span class="token punctuation">-</span> liblapack=3.8.0=14_openblas
+
+<span class="token punctuation">-</span> libllvm8=8.0.1=h770b8ee_0
+
+<span class="token punctuation">-</span> libllvm9=9.0.1=ha1b3eb9_0
+
+<span class="token punctuation">-</span> libopenblas=0.3.7=h3d69b6c_6
+
+<span class="token punctuation">-</span> libpng=1.6.37=h2573ce8_0
+
+<span class="token punctuation">-</span> libprotobuf=3.11.2=hd174df1_0
+
+<span class="token punctuation">-</span> libsodium=1.0.17=h01d97ff_0
+
+<span class="token punctuation">-</span> libtiff=4.1.0=ha78913b_3
+
+<span class="token punctuation">-</span> lime=0.1.1.37=py_0
+
+<span class="token punctuation">-</span> llvm<span class="token punctuation">-</span>openmp=9.0.1=h40edb58_0
+
+<span class="token punctuation">-</span> llvmlite=0.30.0=py37h05045ef_1
+
+<span class="token punctuation">-</span> lz4<span class="token punctuation">-</span>c=1.8.3=h6de7cb9_1001
+
+<span class="token punctuation">-</span> mako=1.1.0=py_0
+
+<span class="token punctuation">-</span> markdown=3.1.1=py_0
+
+<span class="token punctuation">-</span> markupsafe=1.1.1=py37h0b31af3_0
+
+<span class="token punctuation">-</span> matplotlib=3.1.2=py37_1
+
+<span class="token punctuation">-</span> matplotlib<span class="token punctuation">-</span>base=3.1.2=py37h11da6c2_1
+
+<span class="token punctuation">-</span> mccabe=0.6.1=py_1
+
+<span class="token punctuation">-</span> missingno=0.4.2=py_0
+
+<span class="token punctuation">-</span> mistune=0.8.4=py37h0b31af3_1000
+
+<span class="token punctuation">-</span> more<span class="token punctuation">-</span>itertools=8.0.2=py_0
+
+<span class="token punctuation">-</span> murmurhash=1.0.0=py37h4a8c4bd_0
+
+<span class="token punctuation">-</span> nb_conda=2.2.1=py37_2
+
+<span class="token punctuation">-</span> nb_conda_kernels=2.2.2=py37_0
+
+<span class="token punctuation">-</span> nbconvert=5.6.1=py37_0
+
+<span class="token punctuation">-</span> nbformat=5.0.3=py_0
+
+<span class="token punctuation">-</span> ncurses=6.1=h0a44026_1002
+
+<span class="token punctuation">-</span> nltk=3.4.4=py_0
+
+<span class="token punctuation">-</span> notebook=6.0.1=py37_0
+
+<span class="token punctuation">-</span> numba=0.46.0=py37h4f17bb1_1
+
+<span class="token punctuation">-</span> numexpr=2.7.1=py37h4f17bb1_0
+
+<span class="token punctuation">-</span> numpy=1.17.3=py37hde6bac1_0
+
+<span class="token punctuation">-</span> olefile=0.46=py_0
+
+<span class="token punctuation">-</span> openssl=1.1.1d=h0b31af3_0
+
+<span class="token punctuation">-</span> packaging=20.0=py_0
+
+<span class="token punctuation">-</span> pandas=0.25.3=py37h4f17bb1_0
+
+<span class="token punctuation">-</span> pandas<span class="token punctuation">-</span>profiling=2.3.0=py_0
+
+<span class="token punctuation">-</span> pandoc=2.9.1.1=0
+
+<span class="token punctuation">-</span> pandocfilters=1.4.2=py_1
+
+<span class="token punctuation">-</span> parso=0.5.2=py_0
+
+<span class="token punctuation">-</span> patsy=0.5.1=py_0
+
+<span class="token punctuation">-</span> pexpect=4.7.0=py37_0
+
+<span class="token punctuation">-</span> phik=0.9.8=py_0
+
+<span class="token punctuation">-</span> pickleshare=0.7.5=py37_1000
+
+<span class="token punctuation">-</span> pillow=7.0.0=py37h918e99a_0
+
+<span class="token punctuation">-</span> pip=19.3.1=py37_0
+
+<span class="token punctuation">-</span> plac=0.9.6=py_1
+
+<span class="token punctuation">-</span> plotly=4.4.1=py_0
+
+<span class="token punctuation">-</span> pluggy=0.13.0=py37_0
+
+<span class="token punctuation">-</span> preshed=3.0.2=py37h4a8c4bd_1
+
+<span class="token punctuation">-</span> prometheus_client=0.7.1=py_0
+
+<span class="token punctuation">-</span> prompt_toolkit=3.0.2=py_0
+
+<span class="token punctuation">-</span> protobuf=3.11.2=py37h4a8c4bd_0
+
+<span class="token punctuation">-</span> psutil=5.6.7=py37h0b31af3_0
+
+<span class="token punctuation">-</span> ptyprocess=0.6.0=py_1001
+
+<span class="token punctuation">-</span> py=1.8.1=py_0
+
+<span class="token punctuation">-</span> pycparser=2.19=py37_1
+
+<span class="token punctuation">-</span> pygments=2.5.2=py_0
+
+<span class="token punctuation">-</span> pygpu=0.7.6=py37h3b54f70_1000
+
+<span class="token punctuation">-</span> pyldavis=2.1.2=py_0
+
+<span class="token punctuation">-</span> pylint=2.4.4=py37_0
+
+<span class="token punctuation">-</span> pyopenssl=19.1.0=py37_0
+
+<span class="token punctuation">-</span> pyparsing=2.4.6=py_0
+
+<span class="token punctuation">-</span> pyrsistent=0.15.7=py37h0b31af3_0
+
+<span class="token punctuation">-</span> pysocks=1.7.1=py37_0
+
+<span class="token punctuation">-</span> pytest=5.3.2=py37_0
+
+<span class="token punctuation">-</span> pytest<span class="token punctuation">-</span>arraydiff=0.3=py_0
+
+<span class="token punctuation">-</span> pytest<span class="token punctuation">-</span>astropy=0.7.0=py_0
+
+<span class="token punctuation">-</span> pytest<span class="token punctuation">-</span>astropy<span class="token punctuation">-</span>header=0.1.2=py_0
+
+<span class="token punctuation">-</span> pytest<span class="token punctuation">-</span>doctestplus=0.4.0=py_0
+
+<span class="token punctuation">-</span> pytest<span class="token punctuation">-</span>openfiles=0.4.0=py_0
+
+<span class="token punctuation">-</span> pytest<span class="token punctuation">-</span>pylint=0.14.1=py_0
+
+<span class="token punctuation">-</span> pytest<span class="token punctuation">-</span>remotedata=0.3.1=py_0
+
+<span class="token punctuation">-</span> pytest<span class="token punctuation">-</span>runner=5.2=py_0
+
+<span class="token punctuation">-</span> python=3.7.6=h5c2c468_2
+
+<span class="token punctuation">-</span> python<span class="token punctuation">-</span>dateutil=2.8.1=py_0
+
+<span class="token punctuation">-</span> pytz=2019.3=py_0
+
+<span class="token punctuation">-</span> pyyaml=5.3=py37h0b31af3_0
+
+<span class="token punctuation">-</span> pyzmq=18.1.1=py37h4bf09a9_0
+
+<span class="token punctuation">-</span> readline=8.0=hcfe32e1_0
+
+<span class="token punctuation">-</span> requests=2.22.0=py37_1
+
+<span class="token punctuation">-</span> retrying=1.3.3=py_2
+
+<span class="token punctuation">-</span> scikit<span class="token punctuation">-</span>learn=0.22.1=py37h3dc85bc_1
+
+<span class="token punctuation">-</span> scipy=1.4.1=py37h82752d6_0
+
+<span class="token punctuation">-</span> seaborn=0.9.0=py_2
+
+<span class="token punctuation">-</span> send2trash=1.5.0=py_0
+
+<span class="token punctuation">-</span> setuptools=44.0.0=py37_0
+
+<span class="token punctuation">-</span> six=1.13.0=py37_0
+
+<span class="token punctuation">-</span> sortedcontainers=2.1.0=py_0
+
+<span class="token punctuation">-</span> spacy=2.2.3=py37ha1b3eb9_0
+
+<span class="token punctuation">-</span> sqlite=3.30.1=h93121df_0
+
+<span class="token punctuation">-</span> srsly=1.0.0=py37h4a8c4bd_0
+
+<span class="token punctuation">-</span> statsmodels=0.10.2=py37h3b54f70_0
+
+<span class="token punctuation">-</span> tapi=1000.10.8=ha1b3eb9_4
+
+<span class="token punctuation">-</span> tensorboard=1.13.1=py37_0
+
+<span class="token punctuation">-</span> tensorflow=1.13.1=hfddd6c2_8
+
+<span class="token punctuation">-</span> tensorflow<span class="token punctuation">-</span>base=1.13.1=py37_8
+
+<span class="token punctuation">-</span> tensorflow<span class="token punctuation">-</span>estimator=1.13.0=py37h24bf2e0_0
+
+<span class="token punctuation">-</span> termcolor=1.1.0=py_2
+
+<span class="token punctuation">-</span> terminado=0.8.3=py37_0
+
+<span class="token punctuation">-</span> testpath=0.4.4=py_0
+
+<span class="token punctuation">-</span> theano=1.0.4=py37h0a44026_1000
+
+<span class="token punctuation">-</span> thinc=7.3.0=py37ha1b3eb9_0
+
+<span class="token punctuation">-</span> tk=8.6.10=hbbe82c9_0
+
+<span class="token punctuation">-</span> tornado=6.0.3=py37h0b31af3_0
+
+<span class="token punctuation">-</span> tqdm=4.41.1=py_0
+
+<span class="token punctuation">-</span> traitlets=4.3.3=py37_0
+
+<span class="token punctuation">-</span> urllib3=1.25.7=py37_0
+
+<span class="token punctuation">-</span> wasabi=0.6.0=py_0
+
+<span class="token punctuation">-</span> wcwidth=0.1.8=py_0
+
+<span class="token punctuation">-</span> webencodings=0.5.1=py_1
+
+<span class="token punctuation">-</span> werkzeug=0.16.0=py_0
+
+<span class="token punctuation">-</span> wheel=0.33.6=py37_0
+
+<span class="token punctuation">-</span> wordcloud=1.6.0=py37h0b31af3_0
+
+<span class="token punctuation">-</span> wrapt=1.11.2=py37h0b31af3_0
+
+<span class="token punctuation">-</span> xz=5.2.4=h1de35cc_1001
+
+<span class="token punctuation">-</span> yaml=0.2.2=h0b31af3_1
+
+<span class="token punctuation">-</span> zeromq=4.3.2=h6de7cb9_2
+
+<span class="token punctuation">-</span> zipp=0.6.0=py_0
+
+<span class="token punctuation">-</span> zlib=1.2.11=h0b31af3_1006
+
+<span class="token punctuation">-</span> zstd=1.4.4=he7fca8b_1
+
+<span class="token punctuation">-</span> <span class="token key atrule">pip</span><span class="token punctuation">:</span>
+
+<span class="token punctuation">-</span> en<span class="token punctuation">-</span>core<span class="token punctuation">-</span>web<span class="token punctuation">-</span>sm==2.2.5
+
+<span class="token key atrule">prefix</span><span class="token punctuation">:</span> /Users/xiangyutong/opt/anaconda3/envs/env_pro_ds
+</code></pre>
+
+    </div>
+  </div>
+</body>
+
+</html>
